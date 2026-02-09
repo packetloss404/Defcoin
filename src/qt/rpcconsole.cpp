@@ -17,7 +17,10 @@
 #include "netbase.h"
 #include "rpc/server.h"
 #include "rpc/client.h"
+#include "rpc/blockchain.h"
+#include "rpc/mining.h"
 #include "util.h"
+#include "validation.h"
 
 #include <openssl/crypto.h>
 
@@ -32,6 +35,8 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
+#include <algorithm>
+
 #include <QScrollBar>
 #include <QSettings>
 #include <QSignalMapper>
@@ -816,6 +821,7 @@ void RPCConsole::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     if (!headers) {
         ui->numberOfBlocks->setText(QString::number(count));
         ui->lastBlockTime->setText(blockDate.toString());
+        updateNetworkHealth();
     }
 }
 
@@ -1067,6 +1073,10 @@ void RPCConsole::updateNodeDetail(const CNodeCombinedStats *stats)
     ui->peerHeight->setText(QString("%1").arg(QString::number(stats->nodeStats.nStartingHeight)));
     ui->peerWhitelisted->setText(stats->nodeStats.fWhitelisted ? tr("Yes") : tr("No"));
 
+    // Per-message-type traffic stats
+    ui->peerMsgSent->setText(formatMsgStats(stats->nodeStats.mapSendBytesPerMsgCmd));
+    ui->peerMsgRecv->setText(formatMsgStats(stats->nodeStats.mapRecvBytesPerMsgCmd));
+
     // This check fails for example if the lock was busy and
     // nodeStateStats couldn't be fetched.
     if (stats->fNodeStateStatsAvailable) {
@@ -1087,6 +1097,77 @@ void RPCConsole::updateNodeDetail(const CNodeCombinedStats *stats)
     }
 
     ui->detailWidget->show();
+}
+
+void RPCConsole::updateNetworkHealth()
+{
+    LOCK(cs_main);
+
+    // Difficulty
+    double diff = GetDifficulty();
+    ui->difficulty->setText(QString::number(diff, 'f', 4));
+
+    // Network hash rate (estimated from last 120 blocks)
+    UniValue hashpsVal = GetNetworkHashPS(120, -1);
+    double hashps = hashpsVal.get_real();
+    QString hashStr;
+    if (hashps >= 1e15)
+        hashStr = QString::number(hashps / 1e15, 'f', 2) + " PH/s";
+    else if (hashps >= 1e12)
+        hashStr = QString::number(hashps / 1e12, 'f', 2) + " TH/s";
+    else if (hashps >= 1e9)
+        hashStr = QString::number(hashps / 1e9, 'f', 2) + " GH/s";
+    else if (hashps >= 1e6)
+        hashStr = QString::number(hashps / 1e6, 'f', 2) + " MH/s";
+    else if (hashps >= 1e3)
+        hashStr = QString::number(hashps / 1e3, 'f', 2) + " KH/s";
+    else
+        hashStr = QString::number(hashps, 'f', 2) + " H/s";
+    ui->networkHashRate->setText(hashStr);
+
+    // Chain tips
+    std::set<const CBlockIndex*> setOrphans;
+    std::set<const CBlockIndex*> setPrevs;
+    for (const auto& item : mapBlockIndex) {
+        if (!chainActive.Contains(item.second)) {
+            setOrphans.insert(item.second);
+            setPrevs.insert(item.second->pprev);
+        }
+    }
+    int tipCount = 1; // active chain tip
+    for (const CBlockIndex* orphan : setOrphans) {
+        if (setPrevs.count(orphan) == 0)
+            tipCount++;
+    }
+    if (tipCount == 1)
+        ui->chainTips->setText(QString("1 (active chain only)"));
+    else
+        ui->chainTips->setText(QString("%1 (%2 fork(s))").arg(tipCount).arg(tipCount - 1));
+
+    // Sync progress
+    if (clientModel) {
+        double progress = clientModel->getVerificationProgress(nullptr);
+        ui->syncProgress->setText(QString::number(progress * 100.0, 'f', 2) + "%");
+    }
+}
+
+QString RPCConsole::formatMsgStats(const std::map<std::string, uint64_t>& msgMap)
+{
+    std::vector<std::pair<uint64_t, std::string>> sorted;
+    for (const auto& entry : msgMap) {
+        if (entry.second > 0)
+            sorted.push_back({entry.second, entry.first});
+    }
+    std::sort(sorted.begin(), sorted.end(), std::greater<std::pair<uint64_t, std::string>>());
+
+    QStringList parts;
+    int shown = 0;
+    for (const auto& item : sorted) {
+        if (shown >= 5) break;
+        parts << QString("%1: %2").arg(QString::fromStdString(item.second), FormatBytes(item.first));
+        shown++;
+    }
+    return parts.isEmpty() ? QString("none") : parts.join(", ");
 }
 
 void RPCConsole::resizeEvent(QResizeEvent *event)

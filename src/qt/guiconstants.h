@@ -49,7 +49,7 @@ static const int MAX_URI_LENGTH = 255;
 #define SPINNER_FRAMES 36
 
 #define QAPP_ORG_NAME "Defcoin"
-#define QAPP_ORG_DOMAIN "defcoin-ng.org"
+#define QAPP_ORG_DOMAIN "defcoin.io"
 #define QAPP_APP_NAME_DEFAULT "Defcoin-Qt"
 #define QAPP_APP_NAME_TESTNET "Defcoin-Qt-testnet"
 

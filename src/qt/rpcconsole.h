@@ -155,6 +155,10 @@ private:
 
     /** Update UI with latest network info from model. */
     void updateNetworkState();
+    /** Update network health fields (difficulty, hashrate, chain tips, sync). */
+    void updateNetworkHealth();
+    /** Format per-message-type byte map into a readable summary string. */
+    static QString formatMsgStats(const std::map<std::string, uint64_t>& msgMap);
 };
 
 #endif // BITCOIN_QT_RPCCONSOLE_H

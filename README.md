@@ -1,13 +1,11 @@
-Defcoin integration/staging tree
-================================
+Defcoin Core v1.0.2
+===================
 
-[![Build Status](https://travis-ci.org/NaH012/Defcoin.svg?branch=master)](https://travis-ci.org/NaH012/Defcoin)
+http://www.defcoin.io
 
-http://www.defcoin-ng.org
-
-Copyright (c) 2009-2018 Bitcoin Developers<br>
-Copyright (c) 2011-2018 Litecoin Developers<br>
-Copyright (c) 2011-2018 Defcoin Developers
+Copyright (c) 2009-2026 Bitcoin Developers<br>
+Copyright (c) 2011-2026 Litecoin Developers<br>
+Copyright (c) 2011-2026 Defcoin Developers
 
 What is Defcoin?
 ----------------
@@ -22,7 +20,7 @@ Defcoin is a fork of Litecoin which is a lite version of Bitcoin using scrypt as
  - 50 coins per block. Now 25 coins after first halving event
 
 For more information, as well as an immediately useable, binary version of
-the Defcoin client sofware, see http://www.defcoin-ng.org.
+the Defcoin client software, see http://www.defcoin.io.
 
 License
 -------
@@ -68,7 +66,7 @@ Unit tests for the GUI code are in `src/qt/test/`. They are compiled with the Qt
 ----------------------------------
 ### Themeing
 
-The theme data for the Qt GUI is stored in `src/qt/theme.h`. 
+The theme data for the Qt GUI is stored in `src/qt/theme.h`.
 
 ----------------------------------
 ## To Do

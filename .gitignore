@@ -56,6 +56,7 @@ src/qt/test/moc*.cpp
 *.o
 *.o-*
 *.patch
+!depends/patches/**
 *.a
 *.pb.cc
 *.pb.h
@@ -109,3 +110,7 @@ test/cache/*
 
 libbitcoinconsensus.pc
 contrib/devtools/split-debug.sh
+
+release-windows/
+wallet_backup/
+.claude/
