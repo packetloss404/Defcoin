@@ -1,0 +1,132 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libtool autotools-dev automake pkg-config \
+            libssl-dev libevent-dev bsdmainutils libboost-all-dev \
+            libdb5.3++-dev libzmq3-dev libqt5gui5 libqt5core5a libqt5dbus5 \
+            qttools5-dev qttools5-dev-tools libqrencode-dev
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure --with-incompatible-bdb --disable-tests --disable-bench
+          make -j$(nproc)
+
+      - name: Package
+        run: |
+          mkdir -p release-linux
+          cp src/defcoind src/defcoin-cli src/defcoin-tx release-linux/
+          cp src/qt/defcoin-qt release-linux/ || true
+          strip release-linux/* || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: defcoin-linux-x86_64
+          path: release-linux/
+
+  build-macos:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install automake libtool boost openssl@3 libevent qt@5 qrencode berkeley-db@4 zeromq
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure --with-incompatible-bdb --disable-tests --disable-bench \
+            LDFLAGS="-L/usr/local/opt/openssl@3/lib -L/usr/local/opt/berkeley-db@4/lib" \
+            CPPFLAGS="-I/usr/local/opt/openssl@3/include -I/usr/local/opt/berkeley-db@4/include" \
+            PKG_CONFIG_PATH="/usr/local/opt/qt@5/lib/pkgconfig"
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Package
+        run: |
+          mkdir -p release-macos
+          cp src/defcoind src/defcoin-cli src/defcoin-tx release-macos/
+          cp src/qt/defcoin-qt release-macos/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: defcoin-macos-x86_64
+          path: release-macos/
+
+  build-windows:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libtool autotools-dev automake pkg-config \
+            bsdmainutils curl git g++-mingw-w64-x86-64 nsis
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+
+      - name: Build depends
+        run: |
+          cd depends
+          make HOST=x86_64-w64-mingw32 -j$(nproc)
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          CONFIG_SITE=$PWD/depends/x86_64-w64-mingw32/share/config.site ./configure --prefix=/
+          make -j$(nproc)
+
+      - name: Package
+        run: |
+          mkdir -p release-windows
+          cp src/defcoind.exe src/defcoin-cli.exe src/defcoin-tx.exe release-windows/
+          cp src/qt/defcoin-qt.exe release-windows/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: defcoin-windows-x86_64
+          path: release-windows/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create archives
+        run: |
+          cd defcoin-linux-x86_64 && tar -czvf ../defcoin-linux-x86_64.tar.gz * && cd ..
+          cd defcoin-macos-x86_64 && tar -czvf ../defcoin-macos-x86_64.tar.gz * && cd ..
+          cd defcoin-windows-x86_64 && zip -r ../defcoin-windows-x86_64.zip * && cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            defcoin-linux-x86_64.tar.gz
+            defcoin-macos-x86_64.tar.gz
+            defcoin-windows-x86_64.zip
+          draft: true

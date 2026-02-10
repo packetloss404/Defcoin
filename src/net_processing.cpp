@@ -32,6 +32,8 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 
+#include <array>
+
 #if defined(NDEBUG)
 # error "Defcoin cannot be compiled without assertions."
 #endif
