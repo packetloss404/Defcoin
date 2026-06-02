@@ -19,8 +19,47 @@ Defcoin is a fork of Litecoin which is a lite version of Bitcoin using scrypt as
  - ~84 million total coins
  - 50 coins per block. Now 25 coins after first halving event
 
+Defcoin Core is a full Bitcoin Core / Litecoin lineage node: a validating
+peer-to-peer node (`defcoind`), command-line and transaction tools
+(`defcoin-cli`, `defcoin-tx`), a Berkeley DB HD wallet, and a Qt5 desktop
+wallet (`defcoin-qt`). Validation runs on a LevelDB-backed UTXO/chainstate.
+
 For more information, as well as an immediately useable, binary version of
 the Defcoin client software, see http://www.defcoin.io.
+
+Live, checkpointed chain
+------------------------
+
+This is a maintained, active chain — not a dormant fork. Mainnet checkpoints
+in [`src/chainparams.cpp`](src/chainparams.cpp) extend to **block 2,186,382**
+(`defaultAssumeValid` and the checkpoint set were last updated 2026-01-11),
+which both speeds up initial block download and pins the canonical chain.
+
+Network Health panel
+--------------------
+
+The Qt GUI debug window includes a **Network Health panel**
+(`RPCConsole::updateNetworkHealth()` in [`src/qt/rpcconsole.cpp`](src/qt/rpcconsole.cpp),
+laid out in [`src/qt/forms/debugwindow.ui`](src/qt/forms/debugwindow.ui))
+that surfaces live peer/connection state inside the wallet.
+
+Building and releases
+---------------------
+
+A GitHub Actions pipeline ([`.github/workflows/build.yml`](.github/workflows/build.yml))
+builds and packages the full client on every push, pull request, and tag:
+
+ - **Linux** (Ubuntu 22.04) — native build, stripped binaries
+ - **macOS** (macos-13) — native build via Homebrew deps
+ - **Windows** — `mingw-w64` cross-compile from Linux using the `depends/`
+   tree, with `nsis` available for installer packaging
+
+On a `v*` tag the `release` job downloads all three OS artifacts, archives them
+(`.tar.gz` / `.zip`), and publishes a draft GitHub Release.
+
+To build from source, see the standard Bitcoin/Litecoin Core toolchain
+(`./autogen.sh && ./configure && make`); the workflow above documents the exact
+dependency lists and configure flags per platform.
 
 License
 -------
